@@ -1,0 +1,236 @@
+{
+  "name": "AI Document Corrector - Website",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.content.parts[0].text;\n\nconst cleaned = raw\n  .replace(/^```json\\s*/i, '')\n  .replace(/^```\\s*/i, '')\n  .replace(/\\s*```$/i, '');\n\nconst data = JSON.parse(cleaned);\n\nconst score = Math.max(0, 100 - (data.mistakes.length * 2));\n\nlet rows = \"\";\n\nfor (const m of data.mistakes) {\n  rows += `\n    <tr>\n      <td style=\"color:#dc2626;font-weight:bold;\">\n        ${m.wrong} ❌\n      </td>\n      <td style=\"color:#16a34a;font-weight:bold;\">\n        ${m.correct}\n      </td>\n      <td>\n        ${m.explanation}\n      </td>\n    </tr>\n  `;\n}\n\nconst emailHtml = `\n<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<style>\n\nbody{\n    font-family: Arial, sans-serif;\n    margin:40px;\n    color:#333;\n    line-height:1.6;\n}\n\n.report-header{\n    text-align:center;\n    margin-bottom:40px;\n}\n\n.report-header h1{\n    color:#1a365d;\n}\n\n.score-box{\n    background:#f8fafc;\n    border:1px solid #dbeafe;\n    border-radius:8px;\n    padding:20px;\n    margin-bottom:30px;\n}\n\n.score{\n    font-size:24px;\n    font-weight:bold;\n    color:#1a365d;\n}\n\ntable{\n    width:100%;\n    border-collapse:collapse;\n}\n\nth{\n    background:#f2f2f2;\n}\n\nth,td{\n    border:1px solid #ddd;\n    padding:12px;\n    text-align:left;\n}\n\n</style>\n</head>\n<body>\n\n<div class=\"report-header\">\n    <h1>AI Document Correction Report</h1>\n</div>\n\n<div class=\"score-box\">\n    <div class=\"score\">\n        Document Score: ${score}/100\n    </div>\n\n    <div>\n        Total Mistakes Found: ${data.mistakes.length}\n    </div>\n</div>\n\n<table>\n\n<tr>\n    <th>❌ Incorrect</th>\n    <th>✅ Correct</th>\n    <th>Explanation</th>\n</tr>\n\n${rows}\n\n</table>\n\n<p style=\"margin-top:30px;\">\nThe corrected document is attached as a PDF.\n</p>\n\n</body>\n</html>\n`;\n\nreturn [{\n  json: {\n    emailHtml,\n    correctedDocumentHtml: data.corrected_document_html,\n    score,\n    totalMistakes: data.mistakes.length\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        0
+      ],
+      "id": "86723834-bf94-407b-8407-bdacecb0270d",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "file",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "43a923ce-c228-4a85-bda1-ba5d2de52ae8",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a professional English editor and document proofreader.\n\nAnalyze the provided document and:\n\n1. Correct all grammar mistakes.\n2. Correct all spelling mistakes.\n3. Correct all punctuation mistakes.\n4. Improve wording only when necessary.\n5. Preserve the original meaning.\n6. Preserve the original structure, headings, lists, and paragraphs.\n7. Keep professional formatting.\n\nReturn ONLY a valid JSON object.\n\nRequired JSON structure:\n\n{\n\"mistakes\": [\n{\n\"wrong\": \"\",\n\"correct\": \"\",\n\"explanation\": \"\"\n}\n],\n\"corrected_document_html\": \"\"\n}\n\nRules:\n\n* Return ONLY JSON.\n* Do NOT wrap the JSON inside `json or ` code blocks.\n* Do NOT return markdown.\n* Do NOT add any text before the opening {.\n* Do NOT add any text after the closing }.\n* The response must be directly parseable by JSON.parse().\n* corrected_document_html must contain the FULL corrected document.\n* corrected_document_html must be a complete HTML document starting with <!DOCTYPE html>.\n* Use proper HTML formatting (<h1>, <h2>, <p>, <ul>, <ol>, <table>, etc.) when appropriate.\n* Escape all double quotes inside HTML properly so the JSON remains valid.\n* If no mistakes are found, return an empty mistakes array [] and still generate corrected_document_html.\n\nDocument:\n\n{{ $json.text }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "114bccb5-9fe4-4fca-84db-f373b4a0ab49",
+      "name": "Message a model",
+      "retryOnFail": true,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "qCHWel6LwSHNifAj",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://html2pdfapi.com/api/render",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\"apiKey\": \"htb8VhT66w6kRWKCsFdTJxuTQjnFv8GrjOJngqJZcsiK1lm7kk5nJcHY5yuCnuCJ\",\n\"type\": \"pdf\",\n\"html\": {{$json.correctedDocumentHtml.toJsonString()}},\n\"async\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        976,
+        0
+      ],
+      "id": "cd9932a2-cd82-4db2-8301-885d101cccda",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    emailHtml: $('Code in JavaScript').first().json.emailHtml,\n    correctedDocumentHtml: $('Code in JavaScript').first().json.correctedDocumentHtml,\n    score: $('Code in JavaScript').first().json.score,\n    totalMistakes: $('Code in JavaScript').first().json.totalMistakes,\n\n    pdfBase64: $json.data\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        0
+      ],
+      "id": "a3706017-f20c-401a-b692-0205d00965cc",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "document-corrector",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "6bd953ff-4947-4476-928e-03fa2d152169",
+      "name": "Webhook",
+      "webhookId": "db74b246-7109-4ba2-a0bf-4b05b6d1991b"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1584,
+        0
+      ],
+      "id": "379a25e4-980c-4d73-adb0-7dbfe3abdbf2",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1184,
+        0
+      ],
+      "id": "9615151d-2057-4ebb-935c-82aa8479f8b9",
+      "name": "Extract from File1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Extract from File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "1e296507-24ce-4dd9-a3eb-2b51ab6649ef",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c16fcee0ac85df6a1d583fa5f4adc138d64703b7df8988ec9f0a62e80392357c"
+  },
+  "nodeGroups": [],
+  "id": "GDEuHKLwTPMuWGC8",
+  "tags": []
+}

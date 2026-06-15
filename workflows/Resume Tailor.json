@@ -1,0 +1,266 @@
+{
+  "name": "Resume Tailor",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "file",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        -128
+      ],
+      "id": "abfd212a-1cae-4d20-a204-18cec9e1a70f",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a senior ATS Resume Reviewer, Recruiter, Career Coach, and Professional Resume Writer.\n\nYou will receive:\n\nRESUME TEXT:\n{{ $json.text }}\n\nJOB DESCRIPTION:\n{{ $json['Job Description'] }}\n\nTASK:\n\nCompare the resume against the job description and return ONLY valid JSON.\n\nCRITICAL INSTRUCTIONS:\n\nThe uploaded resume belongs to a real candidate.\n\nYou MUST preserve and use ONLY information found in the uploaded resume.\n\nYou MUST preserve:\n\n* Candidate name\n* Contact information\n* Education\n* Work experience\n* Projects\n* Skills\n* Languages\n* Certifications\n\nYou MUST NOT:\n\n* Create a fictional candidate\n* Replace the candidate's name\n* Invent new jobs\n* Invent new employers\n* Invent new degrees\n* Invent new certifications\n* Invent achievements that do not exist\n* Invent years of experience\n* Invent technical skills not present in the resume\n\nYou MAY:\n\n* Improve wording\n* Improve grammar\n* Improve formatting\n* Improve ATS compatibility\n* Reorganize sections\n* Highlight existing strengths\n* Add relevant keywords naturally when they match the candidate's background\n* Rewrite bullet points professionally\n\nIf information is missing, keep the original content unchanged.\n\nThe optimizedResumeHtml MUST be an improved version of the uploaded resume, NOT a completely new resume.\n\nSCORING RULES:\n\nmatchScore:\n\n* Estimate how well the resume matches the job description.\n* Value between 0 and 100.\n\natsScore:\n\n* Estimate ATS compatibility.\n* Value between 0 and 100.\n\nMISSING KEYWORDS:\n\nList important keywords from the job description that are missing from the resume.\n\nSTRENGTHS:\n\nList the strongest matching points between the resume and the job description.\n\nWEAKNESSES:\n\nList the weakest points reducing the candidate's competitiveness.\n\nRECOMMENDATIONS:\n\nProvide practical actions to improve the resume.\n\noptimizedResumeHtml:\n\nGenerate a complete ATS-friendly HTML resume.\n\nRequirements:\n\n* Full HTML document.\n* Include <!DOCTYPE html>.\n* Single-column layout.\n* Clean professional formatting.\n* ATS-friendly structure.\n* No icons.\n* No graphics.\n* No tables.\n* No multi-column layouts.\n* No progress bars.\n* No decorative elements.\n* Use standard resume sections.\n* Preserve all original candidate information.\n* Improve wording and readability.\n* Integrate relevant keywords naturally.\n* Keep the resume professional and recruiter-friendly.\n\nRETURN EXACTLY THIS JSON STRUCTURE:\n\n{\n\"matchScore\": 0,\n\"atsScore\": 0,\n\"missingKeywords\": [],\n\"strengths\": [],\n\"weaknesses\": [],\n\"recommendations\": [],\n\"optimizedResumeHtml\": \"\"\n}\n\nIMPORTANT:\n\nReturn ONLY valid JSON.\n\nDo NOT use markdown.\n\nDo NOT wrap the response inside ```json.\n\nDo NOT provide explanations before or after the JSON.\n\nThe response must start with {\n\nand end with }.\n\nmake sure to say that each experience should include dates.\n\ndo not add optional things to the cv"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        640,
+        -16
+      ],
+      "id": "3cf0df40-5a3d-4d74-b561-f53db524140c",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "qCHWel6LwSHNifAj",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.content.parts[0].text;\n\nconst cleaned = raw\n  .replace(/^```json\\s*/i, '')\n  .replace(/^```\\s*/i, '')\n  .replace(/\\s*```$/i, '');\n\nconst data = JSON.parse(cleaned);\n\nreturn [{\n  json: {\n    matchScore: data.matchScore,\n    atsScore: data.atsScore,\n    missingKeywords: data.missingKeywords,\n    strengths: data.strengths,\n    weaknesses: data.weaknesses,\n    recommendations: data.recommendations,\n    optimizedResumeHtml: data.optimizedResumeHtml\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        -16
+      ],
+      "id": "0e30403b-d57e-471c-944b-99fe733feab8",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        432,
+        -16
+      ],
+      "id": "5f3f6998-f5a0-40d7-863c-5ae7ab43fbf2",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://html2pdfapi.com/api/render",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"apiKey\": \"htb8VhT66w6kRWKCsFdTJxuTQjnFv8GrjOJngqJZcsiK1lm7kk5nJcHY5yuCnuCJ\",\n  \"type\": \"pdf\",\n  \"html\": {{$json.optimizedResumeHtml.toJsonString()}},\n  \"async\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1184,
+        -16
+      ],
+      "id": "debb4ead-13b3-43f6-96a5-071c586cccf3",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1392,
+        -16
+      ],
+      "id": "f9d7a7c3-34ae-4e4c-90b8-513b1d970eb2",
+      "name": "Extract from File1"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    matchScore: $('Code in JavaScript').first().json.matchScore,\n    atsScore: $('Code in JavaScript').first().json.atsScore,\n\n    missingKeywords: $('Code in JavaScript').first().json.missingKeywords,\n    strengths: $('Code in JavaScript').first().json.strengths,\n    weaknesses: $('Code in JavaScript').first().json.weaknesses,\n    recommendations: $('Code in JavaScript').first().json.recommendations,\n\n    optimizedResumeHtml: $('Code in JavaScript').first().json.optimizedResumeHtml,\n\n    pdfBase64: $json.data\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        -16
+      ],
+      "id": "d6d1bfc4-e4c3-4f71-ab67-380bc0af5fff",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "resume-tailor",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        16,
+        -16
+      ],
+      "id": "c9c89d13-3ab5-4f36-9dd8-00ea0f56aba7",
+      "name": "Webhook1",
+      "webhookId": "afa3cacc-87a7-461e-a442-638138ce6d1b"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1808,
+        -16
+      ],
+      "id": "99ebfb24-850e-49ba-8299-d1a0c69355b5",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Extract from File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "183ba91c-7652-4355-a079-e5772c881f27",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c16fcee0ac85df6a1d583fa5f4adc138d64703b7df8988ec9f0a62e80392357c"
+  },
+  "nodeGroups": [],
+  "id": "pWb8BuSWANfBsSiE",
+  "tags": []
+}
