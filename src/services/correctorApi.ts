@@ -26,7 +26,7 @@ const MOCK_RESPONSE: CorrectionApiResponse = {
 
 // Simulates upload + processing with realistic progress steps
 export async function submitDocumentMock(
-  file: File,
+  _file: File,
   onUploadProgress: (percent: number) => void
 ): Promise<CorrectionApiResponse> {
   await new Promise<void>((resolve) => {
