@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ResumeDropZone } from '../../components/resumeTailor/ResumeDropZone';
 import { FilePreview } from '../../components/upload/FilePreview';
 import { UploadProgress } from '../../components/upload/UploadProgress';
+import { ErrorToast } from '../../components/ui/ErrorToast';
 import { useResumeTailorStore } from '../../store/resumeTailorStore';
 import { useResumeTailor } from '../../hooks/useResumeTailor';
 
@@ -9,8 +10,8 @@ export default function ResumeTailorPage() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [jdError, setJdError] = useState<string | null>(null);
 
-  const { selectedFile, jobDescription, setFile, setJobDescription } = useResumeTailorStore();
-  const { status, uploadPercent, processingMessage, error, submit, reset } = useResumeTailor();
+  const { selectedFile, jobDescription, setFile, setJobDescription, setError } = useResumeTailorStore();
+  const { status, uploadPercent, processingMessage, error, submit } = useResumeTailor();
 
   const isActive = status === 'uploading' || status === 'processing';
 
@@ -147,26 +148,6 @@ export default function ResumeTailorPage() {
               )}
             </div>
 
-            {/* Submission error */}
-            {error && (
-              <div className="flex items-start gap-2.5 p-3.5 bg-red-50 border border-red-100 rounded-xl text-sm text-red-700">
-                <svg className="w-4 h-4 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10A8 8 0 112 10a8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-                <div>
-                  <p className="font-semibold">Something went wrong</p>
-                  <p className="text-red-600 mt-0.5 text-xs">{error}</p>
-                  <button
-                    type="button"
-                    onClick={() => reset()}
-                    className="mt-1.5 text-red-700 underline text-xs hover:text-red-800"
-                  >
-                    Try again
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Submit */}
             <button
               type="button"
@@ -196,6 +177,7 @@ export default function ResumeTailorPage() {
           </div>
         </div>
       </div>
+      <ErrorToast message={error} onDismiss={() => setError(null)} />
     </div>
   );
 }
