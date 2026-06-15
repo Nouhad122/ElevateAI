@@ -54,7 +54,7 @@ The platform combines intelligent document correction and ATS resume optimizatio
 ### Deployment
 
 * Vercel
-* Railway
+* Render
 
 ## Mission
 
