@@ -93,5 +93,11 @@ export async function submitResumeForTailoring(
     }
   );
 
-  return Array.isArray(response.data) ? response.data[0] : response.data;
+  const data = Array.isArray(response.data) ? response.data[0] : response.data;
+
+  if (!data?.optimizedResumeHtml) {
+    throw new Error('The service encountered an error. Please try again.');
+  }
+
+  return data;
 }

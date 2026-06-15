@@ -69,6 +69,11 @@ export async function submitDocumentForCorrection(
     }
   );
 
-  // n8n wraps workflow output in an array — unwrap if needed
-  return Array.isArray(response.data) ? response.data[0] : response.data;
+  const data = Array.isArray(response.data) ? response.data[0] : response.data;
+
+  if (!data?.correctedDocumentHtml) {
+    throw new Error('The service encountered an error. Please try again.');
+  }
+
+  return data;
 }
